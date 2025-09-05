@@ -30,6 +30,9 @@ INSTALLED_APPS = [
 
 INSTALLED_APPS += [
     'authentication',
+    'organizations',
+    'classrooms',
+    'classes'
 ]
 
 MIDDLEWARE = [
@@ -43,6 +46,8 @@ MIDDLEWARE = [
 ]
 
 
+
+
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.resend.com'
 EMAIL_PORT = 2587
@@ -50,6 +55,7 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'resend'
 EMAIL_HOST_PASSWORD = 're_13RCPBWu_421udYzMwbk1v3cNSVA8KDLg'
 DEFAULT_FROM_EMAIL = 'onboarding@resend.dev'
+
 
 
 

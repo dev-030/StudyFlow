@@ -37,3 +37,4 @@ class CreateTokenSerializer(TokenObtainPairSerializer):
         token['profile_pic'] = user.profile_pic
 
         return token
+    
