@@ -4,5 +4,5 @@ from .views import Memberships, OrganizationView
 
 urlpatterns = [
   path('memberships/', Memberships.as_view(), name='user_register'),
-  path('', OrganizationView.as_view(), name='create-organization')
+  path('', OrganizationView.as_view(), name='create-organization'),
 ]

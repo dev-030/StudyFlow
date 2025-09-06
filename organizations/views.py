@@ -15,8 +15,36 @@ class Memberships(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
         memberships = Membership.objects.filter(user=request.user)
-        serializer = MembershipSerializer(memberships, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        response = {
+            'organizations': [],
+            'classrooms': [],
+            'classes': []
+        }
+
+        for membership in memberships:
+            if membership.organization:
+                response['organizations'].append({
+                    "id": membership.organization.id,
+                    "name": membership.organization.name,
+                    "role": membership.role,
+                })
+            elif membership.classroom:
+                response['classrooms'].append({
+                    "id": membership.classroom.id,
+                    "name": membership.classroom.name,
+                    "role": membership.role
+                })
+            elif membership.classes:
+                response['classes'].append({
+                    "id": membership.classes.id,
+                    "name": membership.classes.name,
+                    "role": membership.role
+                })
+
+        return Response(response, status=status.HTTP_200_OK)
+    
+
+
 
 
 class OrganizationView(APIView):
@@ -45,3 +73,5 @@ class OrganizationView(APIView):
             "created_by": org.created_by.id,
             "created_at": org.created_at
         }, status=status.HTTP_201_CREATED)
+    
+
