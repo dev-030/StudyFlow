@@ -42,7 +42,7 @@ class RegisterUser(APIView):
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
 
-            send_verification_email.delay(user.id, uid, token)
+            # send_verification_email.delay(user.id, uid, token)
 
             return Response({"Message":"A verification mail has been sent to the email"}, status=status.HTTP_200_OK)
         return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
