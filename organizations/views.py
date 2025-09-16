@@ -1,77 +1,19 @@
-from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
-from .models import Membership, Organization
-from .serializers import MembershipSerializer
-import re
-from django.db import transaction
-
+from .models import Membership
+from .serializers import MembershipSerializer, OrganizationSerializer
+from rest_framework.generics import CreateAPIView
 
 
 
 class Memberships(APIView):
-    permission_classes = [IsAuthenticated]
     def get(self, request):
-        memberships = Membership.objects.filter(user=request.user)
-        response = {
-            'organizations': [],
-            'classrooms': [],
-            'classes': []
-        }
-
-        for membership in memberships:
-            if membership.organization:
-                response['organizations'].append({
-                    "id": membership.organization.id,
-                    "name": membership.organization.name,
-                    "role": membership.role,
-                })
-            elif membership.classroom:
-                response['classrooms'].append({
-                    "id": membership.classroom.id,
-                    "name": membership.classroom.name,
-                    "role": membership.role
-                })
-            elif membership.classes:
-                response['classes'].append({
-                    "id": membership.classes.id,
-                    "name": membership.classes.name,
-                    "role": membership.role
-                })
-
-        return Response(response, status=status.HTTP_200_OK)
+        memberships = Membership.objects.filter(user=request.user).select_related('organization', 'classroom', 'classes')
+        serializer = MembershipSerializer(memberships)
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
 
 
-
-
-class OrganizationView(APIView):
-    permission_classes = [IsAuthenticated]
-    def post(self,request):
-
-        name = request.data.get('name', "").strip()
-
-        if not name:
-            return Response({"error":"name is required"}, status=status.HTTP_400_BAD_REQUEST)
-        if len(name) > 100:
-            return Response({"error": "Name too long"}, status=status.HTTP_400_BAD_REQUEST)
-        if not re.fullmatch(r"[A-Za-z0-9\s\-]+", name):
-            return Response({"error":"Invalid characters in name"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
-            with transaction.atomic():
-                org = Organization.objects.create(name=name, created_by=request.user)
-                Membership.objects.create(user=request.user, organization = org, role = 'admin', status = 'approved')
-        except InterruptedError:
-            return Response({'error': 'Internal server error'}, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response({
-            "id": org.id,
-            "name": org.name,
-            "created_by": org.created_by.id,
-            "created_at": org.created_at
-        }, status=status.HTTP_201_CREATED)
-    
-
+class OrganizationView(CreateAPIView):
+    serializer_class = OrganizationSerializer
