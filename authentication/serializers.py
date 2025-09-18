@@ -1,6 +1,12 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes
+from django.core.mail import send_mail
+from django.db import transaction
+from .tasks import send_verification_email
+from django.contrib.auth.tokens import default_token_generator
 
 
 
@@ -13,18 +19,22 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['full_name', 'email', 'password']
+    
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Email already in use.")
+        return value
 
     def create(self, validated_data):
-        full_name = validated_data.get('full_name', '')
-
-        user = User.objects.create_user(
-            full_name = full_name,
-            email = validated_data['email'],
-            password = validated_data['password'],
-            is_active = False
-        )
-
+        user = User.objects.create_user(**validated_data, is_active = True)
+        # uid = urlsafe_base64_encode(force_bytes(user.pk))
+        # token = default_token_generator.make_token(user)
+        # send_verification_email.delay(user.id, uid, token)
         return user
+    
+    def to_representation(self, instance):
+        return {"message": "User registered successfully"}
+    
     
         
 class CreateTokenSerializer(TokenObtainPairSerializer):

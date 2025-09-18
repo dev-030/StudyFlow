@@ -8,7 +8,7 @@ from django.utils.encoding import force_bytes
 from django.core.mail import send_mail
 from django.db import transaction
 from .tasks import send_verification_email
-from rest_framework import status
+from rest_framework import status, generics
 from django.contrib.auth import authenticate
 from rest_framework.permissions import AllowAny
 from django.contrib.auth import get_user_model
@@ -21,6 +21,8 @@ from django.shortcuts import redirect
 import requests as req
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
+from django.http import HttpResponseRedirect
+
 
 
 
@@ -30,24 +32,35 @@ from google.oauth2 import id_token
 User = get_user_model()
 
 
-class RegisterUser(APIView):
+# class RegisterUser(APIView):
+#     permission_classes = [AllowAny]
+#     def post(self, request):
+
+#         serializer = RegisterSerializer(data=request.data)
+#         if serializer.is_valid():
+
+#             user = serializer.save()
+
+#             uid = urlsafe_base64_encode(force_bytes(user.pk))
+#             token = default_token_generator.make_token(user)
+
+#             # send_verification_email.delay(user.id, uid, token)
+
+#             return Response({"Message":"A verification mail has been sent to the email"}, status=status.HTTP_200_OK)
+#         return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+class RegisterUser(generics.CreateAPIView):
     permission_classes = [AllowAny]
-    def post(self, request):
+    serializer_class = RegisterSerializer
 
-        serializer = RegisterSerializer(data=request.data)
-        if serializer.is_valid():
+    # def create(self, request, *args, **kwargs):
+    #     serializer = self.get_serializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     serializer.save()  
+    #     return Response({"message": "User registered successfully"},status=status.HTTP_201_CREATED)
 
-            user = serializer.save()
 
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = default_token_generator.make_token(user)
-
-            # send_verification_email.delay(user.id, uid, token)
-
-            return Response({"Message":"A verification mail has been sent to the email"}, status=status.HTTP_200_OK)
-        return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-    
-    
 class VerifyEmail(APIView):
     permission_classes = [AllowAny]
     def get(self, request, uid64, token):
@@ -197,7 +210,7 @@ class GoogleLogin(APIView):
         try:
             idinfo = id_token.verify_oauth2_token(
                 id_token_jwt,
-                google_requests(),
+                google_requests.Request(),
                 self.GOOGLE_CLIENT_ID
             )
 
@@ -221,32 +234,43 @@ class GoogleLogin(APIView):
             refresh_token = CreateTokenSerializer.get_token(user)
             access_token = refresh_token.access_token
 
-            response = HttpResponse(status=302)
-            response["Location"] = "http://localhost:8000"
 
-            response.set_cookie(
-                key="refresh_token",
-                value=str(refresh_token),
-                httponly=True,
-                secure=True,
-                samesite="Lax",
-                max_age=60 * 60 * 24,
-                path="/",
-                domain="edcluster.com"
-            )
 
-            response.set_cookie(
-                key="access_token",
-                value=str(access_token),
-                httponly=True,
-                secure=True,
-                samesite="Lax",
-                max_age=60 * 60 * 24,  # 1 day
-                path="/",
-                domain="edcluster.com"
-            )
+            redirect_url = "http://localhost:3000/" 
+            print({"refresh_token": str(refresh_token), "access_token": str(access_token)})
+            # params = {
+            #     "access_token": str(access_token),
+            #     "refresh_token": str(refresh_token),
+            # }
+            # url = f"{redirect_url}?{urlencode(params)}"
+            return HttpResponseRedirect(redirect_url)
 
-            return response
+            # response = HttpResponse(status=302)
+            # response["Location"] = "http://localhost:8000"
+
+            # response.set_cookie(
+            #     key="refresh_token",
+            #     value=str(refresh_token),
+            #     httponly=True,
+            #     secure=True,
+            #     samesite="Lax",
+            #     max_age=60 * 60 * 24,
+            #     path="/",
+            #     domain="edcluster.com"
+            # )
+
+            # response.set_cookie(
+            #     key="access_token",
+            #     value=str(access_token),
+            #     httponly=True,
+            #     secure=True,
+            #     samesite="Lax",
+            #     max_age=60 * 60 * 24,  # 1 day
+            #     path="/",
+            #     domain="edcluster.com"
+            # )
+            # return response
+            return Response({"refresh_token": str(refresh_token), "access_token": str(access_token) }, status=status.HTTP_200_OK)
         except ValueError as e:
             return Response({"error": f"Invalid token: {e}"}, status=status.HTTP_400_BAD_REQUEST)
 

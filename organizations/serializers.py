@@ -75,3 +75,11 @@ class OrganizationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'error': str(e)})  
         
         return org      
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        action = getattr(self.context.get('view'), 'action', None) 
+        if action in ['create', 'update']:
+            self.fields['name'].required = True
+        else:
+            self.fields['name'].required = False

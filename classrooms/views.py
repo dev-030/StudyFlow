@@ -9,7 +9,7 @@ from organizations.models import Membership, Organization
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from classes.models import Class
-
+from django.db.models import F
 
 
 User = get_user_model()
@@ -24,11 +24,11 @@ class ClassroomView(APIView):
             return Response({"error": "classroom_id is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         classes = list(Class.objects.filter(
-            classroom__id = clsroom_id,
+            classroom_id = clsroom_id,
             classroom__memberships__user = request.user,
-            classroom__memberships__role = 'student',
             classroom__memberships__status = 'approved'
-        ).values("id", "name"))
+        ).annotate(role = F('classroom__memberships__role'))
+        .values("id", "name", "role"))
 
         if not classes:
             return Response({"error": "Either classroom not found or you don’t have access"}, status=status.HTTP_400_BAD_REQUEST)
@@ -131,7 +131,7 @@ class AddStudentsView(APIView):
         
         try:
             user = User.objects.get(email=email)
-        except User.DoesNotExist:
+        except User.DoesNotExist: 
             return Response({"error":"user does not exist"}, status=status.HTTP_404_NOT_FOUND)
         
         membership, created = Membership.objects.get_or_create(
