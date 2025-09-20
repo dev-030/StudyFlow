@@ -22,19 +22,24 @@ class MembershipSerializer(serializers.Serializer):
                 response["organization"].append({
                     "id": membership.organization.id,
                     "name": membership.organization.name,
-                    "role": membership.role
+                    "role": membership.role,
+                    "classrooms": membership.classroom_count,
+                    "members": membership.organization_members
                 })
             elif membership.classroom:
                 response['classroom'].append({
                     "id": membership.classroom.id,
                     "name": membership.classroom.name,
-                    "role": membership.role
+                    "role": membership.role,
+                    "classes": membership.class_count,
+                    "members": membership.classroom_members
                 })
             elif membership.classes:
                 response['classes'].append({
                     "id": membership.classes.id,
                     "name": membership.classes.name,
-                    "role": membership.role
+                    "role": membership.role,
+                    "members": membership.class_members
                 })
 
         return response
@@ -45,7 +50,7 @@ class MembershipSerializer(serializers.Serializer):
 class OrganizationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organization
-        fields = ["id", "name", "created_by", "created_at"]
+        fields = ["id", "name", "description", "created_by", "created_at"]
         read_only_fields = ["id", "created_by", "created_at"]
 
     def validate_name(self, value):
@@ -57,6 +62,16 @@ class OrganizationSerializer(serializers.ModelSerializer):
         if not re.fullmatch(r"[A-Za-z0-9\s\-]+", value):
             raise serializers.ValidationError("Invalid characters in name")
         return value
+    
+    # def validate_description(self, value):
+    #     value = value.strip()
+    #     if not value:
+    #         raise serializers.ValidationError("Description is required")
+    #     if len(value) > 255:
+    #         raise serializers.ValidationError("Description too long")
+    #     if not re.fullmatch(r"[A-Za-z0-9\s\-]+", value):
+    #         raise serializers.ValidationError("Invalid characters in description")
+    #     return value
     
     def create(self, validated_data):
         request = self.context['request']

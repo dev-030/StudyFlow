@@ -1,5 +1,4 @@
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 import re
@@ -10,6 +9,10 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from classes.models import Class
 from django.db.models import F
+from rest_framework import viewsets, exceptions
+from .serializers import ClassroomSerializer
+
+
 
 
 User = get_user_model()
@@ -112,6 +115,15 @@ class ClassroomView(APIView):
             return Response({"errror": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+# class ClassroomViewSet(viewsets.ModelViewSet):
+#     serializer_class = ClassroomSerializer
+#     queryset = Classroom.objects.all()
+
+#     def update(self, request, *args, **kwargs):
+#         if not request.user.is_staff:
+#             raise exceptions.PermissionDenied("User must be an admin to update classroom name.")
+#         return super().update(request, *args, **kwargs)
+    
 
 
 

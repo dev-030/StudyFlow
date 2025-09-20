@@ -38,6 +38,7 @@ class AssignmentSubmission(models.Model):
 
 class Organization(models.Model):
     name = models.CharField(max_length=255)
+    description = models.CharField(max_length=255, null=True, blank=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name="created_organizations")
     created_at = models.DateTimeField(auto_now_add=True)
 
