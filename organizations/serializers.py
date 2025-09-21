@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Membership, Organization
 import re
 from django.db import transaction
+from classrooms.models import Classroom
 
 
 
@@ -44,14 +45,32 @@ class MembershipSerializer(serializers.Serializer):
 
         return response
 
+class ClassroomSerializer(serializers.ModelSerializer):
+    student_count = serializers.SerializerMethodField()
+    class_count = serializers.SerializerMethodField()
+    class Meta:
+        model = Classroom
+        fields = ["id", "name", "description", "created_at", "student_count", "class_count"]
+    
+    def get_student_count(self, obj):
+        return obj.memberships.filter(role='student', status='approved').count()
+    def get_class_count(self, obj):
+        return obj.classes.count()
+
+
+    
+
 
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(read_only=True)
+    member_count = serializers.IntegerField(read_only=True)
+    classrooms = ClassroomSerializer(many=True, read_only=True)
     class Meta:
         model = Organization
-        fields = ["id", "name", "description", "created_by", "created_at"]
-        read_only_fields = ["id", "created_by", "created_at"]
+        fields = ["id", "name", "description", "role", "member_count", "classrooms", "created_at"]
+        read_only_fields = ["id", "role", "member_count", "classrooms", "created_at"]
 
     def validate_name(self, value):
         value = value.strip()
@@ -62,16 +81,6 @@ class OrganizationSerializer(serializers.ModelSerializer):
         if not re.fullmatch(r"[A-Za-z0-9\s\-]+", value):
             raise serializers.ValidationError("Invalid characters in name")
         return value
-    
-    # def validate_description(self, value):
-    #     value = value.strip()
-    #     if not value:
-    #         raise serializers.ValidationError("Description is required")
-    #     if len(value) > 255:
-    #         raise serializers.ValidationError("Description too long")
-    #     if not re.fullmatch(r"[A-Za-z0-9\s\-]+", value):
-    #         raise serializers.ValidationError("Invalid characters in description")
-    #     return value
     
     def create(self, validated_data):
         request = self.context['request']

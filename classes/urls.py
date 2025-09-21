@@ -1,7 +1,15 @@
-from django.urls import path
-from .views import ClassView
+from django.urls import path, include
+from .views import ClassViewSet
+from rest_framework.routers import DefaultRouter
+
+
+
+
+router = DefaultRouter()
+router.register(r'', ClassViewSet, basename='classes')
+
 
 
 urlpatterns = [
-  path('', ClassView.as_view(), name='create_class'),
+  path('', include(router.urls)),
 ]

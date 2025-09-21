@@ -8,9 +8,10 @@ from organizations.models import Membership, Organization
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from classes.models import Class
-from django.db.models import F
+from django.db.models import F, Count, Q
 from rest_framework import viewsets, exceptions
 from .serializers import ClassroomSerializer
+
 
 
 
@@ -18,101 +19,143 @@ from .serializers import ClassroomSerializer
 User = get_user_model()
 
 
-class ClassroomView(APIView):
 
-    def get(self, request):
-        clsroom_id = request.data.get('classroom_id')
+class ClassroomViewset(viewsets.ModelViewSet):
 
-        if not clsroom_id:
-            return Response({"error": "classroom_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+    serializer_class = ClassroomSerializer
+    queryset = Classroom.objects.all()
 
-        classes = list(Class.objects.filter(
-            classroom_id = clsroom_id,
-            classroom__memberships__user = request.user,
-            classroom__memberships__status = 'approved'
-        ).annotate(role = F('classroom__memberships__role'))
-        .values("id", "name", "role"))
+    def retrieve(self, request, pk, *args, **kwargs):
+        classroom = Classroom.objects.filter(
+            id = pk,
+            memberships__user = request.user,
+            memberships__status = 'approved'
+        ).annotate(
+            role = F('memberships__role'),
+            student_count = Count(F('memberships')),
+            organization_name = F('organization__name')
+        ).prefetch_related('classes').get() 
+        serializer = self.get_serializer(classroom)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-        if not classes:
-            return Response({"error": "Either classroom not found or you don’t have access"}, status=status.HTTP_400_BAD_REQUEST)
+    def list(self, request, *args, **kwargs):
+        classroom = Classroom.objects.filter(
+            memberships__user = request.user,
+            memberships__status = "approved"
+        ).annotate(
+            role = F('memberships__role'),
+            student_count = Count('memberships',filter=Q(memberships__role='student')),
+            organization_name = F('organization__name'),
+            class_count = Count('classes')
+        ).values("id", "name", "description", "created_at", "role", "student_count", "organization_name", "class_count")
+        return Response(classroom, status=status.HTTP_200_OK)
 
-        return Response({"data": classes}, status=status.HTTP_200_OK)
 
 
-    def post(self, request):
-        name = request.data.get('name', '').strip()
-        org = request.data.get('org_id')
-        if not name:
-            return Response({"error": "A name is required"}, status=status.HTTP_400_BAD_REQUEST)
-        if len(name) > 100:
-            return Response({"error": "Name too long"}, status=status.HTTP_400_BAD_REQUEST)
-        if not re.fullmatch(r"[A-Za-z0-9\s\-]+", name):
-            return Response({"error":"Invalid characters in name"}, status=status.HTTP_400_BAD_REQUEST)
+
         
-        try:
-            with transaction.atomic():
-                organization = None
 
-                if org:
-                    try:
-                        organization = Organization.objects.get(id=org)
-                        if organization.created_by != request.user:
-                            organization = None
-                    except organization.DoesNotExist:
-                        organization = None
 
-                classroom = Classroom.objects.create(
-                    name = name,
-                    admin = request.user,
-                    organization = organization
-                )
 
-                Membership.objects.create(
-                    user = request.user,
-                    role = 'admin',
-                    status = 'approved',
-                    classroom = classroom
-                )
 
-                return Response({
-                    "id": classroom.id,
-                    "name": classroom.name,
-                    "organization": classroom.organization.name if organization else None,
-                    "admin": classroom.admin.id,
-                    "created_at": classroom.created_at
-                }, status=status.HTTP_201_CREATED)
 
-        except Exception as e :
-            return Response({"error" : str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# class ClassroomView(APIView):
+
+#     def get(self, request):
+#         clsroom_id = request.data.get('classroom_id')
+
+#         if not clsroom_id:
+#             return Response({"error": "classroom_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+#         classes = list(Class.objects.filter(
+#             classroom_id = clsroom_id,
+#             classroom__memberships__user = request.user,
+#             classroom__memberships__status = 'approved'
+#         ).annotate(role = F('classroom__memberships__role'))
+#         .values("id", "name", "role"))
+
+#         if not classes:
+#             return Response({"error": "Either classroom not found or you don’t have access"}, status=status.HTTP_400_BAD_REQUEST)
+
+#         return Response({"data": classes}, status=status.HTTP_200_OK)
+
+
+#     def post(self, request):
+#         name = request.data.get('name', '').strip()
+#         org = request.data.get('org_id')
+#         if not name:
+#             return Response({"error": "A name is required"}, status=status.HTTP_400_BAD_REQUEST)
+#         if len(name) > 100:
+#             return Response({"error": "Name too long"}, status=status.HTTP_400_BAD_REQUEST)
+#         if not re.fullmatch(r"[A-Za-z0-9\s\-]+", name):
+#             return Response({"error":"Invalid characters in name"}, status=status.HTTP_400_BAD_REQUEST)
+        
+#         try:
+#             with transaction.atomic():
+#                 organization = None
+
+#                 if org:
+#                     try:
+#                         organization = Organization.objects.get(id=org)
+#                         if organization.created_by != request.user:
+#                             organization = None
+#                     except organization.DoesNotExist:
+#                         organization = None
+
+#                 classroom = Classroom.objects.create(
+#                     name = name,
+#                     admin = request.user,
+#                     organization = organization
+#                 )
+
+#                 Membership.objects.create(
+#                     user = request.user,
+#                     role = 'admin',
+#                     status = 'approved',
+#                     classroom = classroom
+#                 )
+
+#                 return Response({
+#                     "id": classroom.id,
+#                     "name": classroom.name,
+#                     "organization": classroom.organization.name if organization else None,
+#                     "admin": classroom.admin.id,
+#                     "created_at": classroom.created_at
+#                 }, status=status.HTTP_201_CREATED)
+
+#         except Exception as e :
+#             return Response({"error" : str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
     
-    def patch(self, request):
-        name  = request.data.get('name')
-        id = request.data.get('id')
-        try:
-            membership = Membership.objects.filter(
-                user = request.user,
-                classroom_id = id
-            ).first()
-            if membership and membership.role == 'admin':
-                Classroom.objects.filter(id=id).update(name=name)
-                return Response({"message": "classroom name updated successfully..."}, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response ({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+#     def patch(self, request):
+#         name  = request.data.get('name')
+#         id = request.data.get('id')
+#         try:
+#             membership = Membership.objects.filter(
+#                 user = request.user,
+#                 classroom_id = id
+#             ).first()
+#             if membership and membership.role == 'admin':
+#                 Classroom.objects.filter(id=id).update(name=name)
+#                 return Response({"message": "classroom name updated successfully..."}, status=status.HTTP_200_OK)
+#         except Exception as e:
+#             return Response ({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
 
-    def delete(self,request):
-        id = request.data.get('id')
-        try:
-            membership = Membership.objects.filter(
-                user = request.user,
-                classroom_id = id
-            ).first()
-            if membership and membership.role == 'admin':
-                Classroom.objects.filter(id=id).delete()
-                return Response({"message": "Classroom deleted successfully"})
-        except Exception as e :
-            return Response({"errror": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+#     def delete(self,request):
+#         id = request.data.get('id')
+#         try:
+#             membership = Membership.objects.filter(
+#                 user = request.user,
+#                 classroom_id = id
+#             ).first()
+#             if membership and membership.role == 'admin':
+#                 Classroom.objects.filter(id=id).delete()
+#                 return Response({"message": "Classroom deleted successfully"})
+#         except Exception as e :
+#             return Response({"errror": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 # class ClassroomViewSet(viewsets.ModelViewSet):

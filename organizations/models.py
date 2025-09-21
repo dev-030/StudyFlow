@@ -79,10 +79,6 @@ class Membership(models.Model):
         ordering = ['-joined_at']  
         unique_together = ('user', 'classroom')  
 
-    @property
-    def is_admin(self):
-        return self.role == 'admin'
-
     def save(self, *args, **kwargs):
         if not self.pk:
             if self.role in ['admin', 'moderator']:

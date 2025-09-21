@@ -38,6 +38,15 @@ class OrganizationViewSet(viewsets.ModelViewSet):
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
 
+    def is_admin(self, org):
+        if not Membership.objects.filter(
+            user = self.request.user,
+            organization=org,
+            role='admin',
+            status='approved'
+        ).exists():
+            raise PermissionDenied("Only admins can modify this organization")
+
     def list(self, request, *args, **kwargs):
         org = Organization.objects.filter(
             membership__user = request.user,
@@ -49,44 +58,32 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         ).values('id', 'name', 'description', 'role', 'classroom_count', 'member_count')
         return Response(list(org), status=status.HTTP_200_OK)
     
-    def retrieve(self, request, pk, *args, **kwargs):
 
+    def retrieve(self, request, pk, *args, **kwargs):
         org = Organization.objects.filter(
             id = pk,
             membership__user = request.user,
             membership__status = 'approved'
         ).annotate(
             role = F('membership__role'),
-            member_count = Count('membership')
-        ).prefetch_related('classrooms')
-        # .values('id', 'name', 'description', 'role', 'member_count', 'created_at')
+            member_count = Count(F('membership'))
+        ).prefetch_related('classrooms').get()
+        serializer = self.get_serializer(org)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-
-        return Response(org, status=status.HTTP_200_OK)
-
-
-    # def list(self, request, *args, **kwargs):
-
-        # org_id = request.query_params.get('org_id')
-        # if not org_id:
-        #     return Response({"error": "Organization id is required"})
-        
-        # classrooms = Classroom.objects.filter(
-        #     organization_id=org_id, 
-        #     organization__membership_set__user=request.user, 
-        #     organization__membership_set__status='approved'
-        # ).values('id', 'name').distinct()
-
-        # return Response(list(classrooms), status=status.HTTP_200_OK)
 
     def update(self, request, *args, **kwargs):
-        if not request.user.is_staff:
-            raise PermissionDenied("Only admins can update organization name")
-        return super().update(request, *args, **kwargs)
+        org = self.get_object()
+        self.is_admin(org)
+        print(request.data)
+        serializer = self.get_serializer(org, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"message": "Organization updated successfully"}, status=status.HTTP_200_OK)
 
     def destroy(self, request, *args, **kwargs):
-        if not request.user.is_staff:
-            raise PermissionDenied("Only admins can delete organization")
+        org = self.get_object()
+        self.is_admin(org)
         return super().destroy(request, *args, **kwargs)
     
     
