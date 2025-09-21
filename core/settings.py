@@ -163,4 +163,4 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
-ALLOWED_HOSTS = ["core.onrender.com"]
+ALLOWED_HOSTS = ["studyflow-12p6.onrender.com"]
