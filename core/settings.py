@@ -86,6 +86,14 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 DATABASES = {
     'default': env.db()
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.postgresql',
+    #     'NAME': 'studyflow',       # your database name
+    #     'USER': 'studyflow',     # the user you created
+    #     'PASSWORD': 'studyflow',    # password
+    #     'HOST': 'localhost',         # local database
+    #     'PORT': '5432',              # default PostgreSQL port
+    # }
 }
 
 
@@ -157,9 +165,6 @@ REST_FRAMEWORK = {
 # EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # CORS_ALLOWED_ORIGINS = ["*"]
-
 CORS_ALLOW_CREDENTIALS = True
-
-# ALLOWED_HOSTS = ["web-production-e683.up.railway.app"]
 ALLOWED_HOSTS = ["*"]
 CORS_ALLOW_ALL_ORIGINS = True
