@@ -39,7 +39,7 @@ htmlcov/
 .coverage
 
 # env files
-# .env
+.env
 
 # celery beat schedule file
 celerybeat-schedule
