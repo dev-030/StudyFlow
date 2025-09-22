@@ -156,13 +156,10 @@ REST_FRAMEWORK = {
 
 # EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:8080",   
-    "http://127.0.0.1:8080",
-    "https://glistening-strudel-7ca7b8.netlify.app",
-    "https://front-bice-pi.vercel.app/login"
-]
+# CORS_ALLOWED_ORIGINS = ["*"]
 
 CORS_ALLOW_CREDENTIALS = True
 
-ALLOWED_HOSTS = ["studyflow-12p6.onrender.com", "jamil3251.pythonanywhere.com"]
+# ALLOWED_HOSTS = ["web-production-e683.up.railway.app"]
+ALLOWED_HOSTS = ["*"]
+CORS_ALLOW_ALL_ORIGINS = True
